@@ -1,77 +1,228 @@
-const express = require('express');
-const ServerSocket = require('ws').Server;
-const mongoose = require('mongoose'); // 加入 MongoDB 套件
+const express = require("express");
+const ServerSocket = require("ws").Server;
+const mongoose = require("mongoose"); // 加入 MongoDB 套件
 
 const PORT = 8080;
 
 // 連接到 MongoDB
-mongoose.connect('mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log('[Database] Connected to MongoDB');
-}).catch(err => {
-    console.error('[Database] Connection error:', err);
-});
+mongoose
+    .connect(
+        "mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+        {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        }
+    )
+    .then(() => {
+        console.log("[Database] Connected to MongoDB");
+    })
+    .catch((err) => {
+        console.error("[Database] Connection error:", err);
+    });
 
-// 定義訊息的 Schema
-const messageSchema = new mongoose.Schema({
-    clientId: String,
-    message: String,
-    timestamp: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-// 建立 Message model
-const Message = mongoose.model('Message', messageSchema);
-
-const server = express()
-    .listen(PORT, () => console.log(`[Server] Listening on https://localhost:${PORT}`));
+//伺服器設置
+const server = express().listen(PORT, () =>
+    console.log(`[Server] Listening on https://localhost:${PORT}`)
+);
 
 const wss = new ServerSocket({ server });
 
-wss.on('connection', (ws, req) => {
-    ws.id = req.headers['sec-websocket-key'].substring(0, 8);
+wss.on("connection", (ws, req) => {
+    //設置連接事件處理程序 使用 WebSocket 密鑰的前 8 個字符為每個客戶端分配唯一 ID
+    ws.id = req.headers["sec-websocket-key"].substring(0, 8);
     ws.send(`[Client ${ws.id} is connected!]`);
-
-    ws.on('message', async (data) => {
+    //訊息處理
+    ws.on("message", async (data) => {
         try {
-            console.log('[Message from client] data: ', data);
-            
-            // 將訊息儲存到資料庫
-            const newMessage = new Message({
-                clientId: ws.id,
-                message: data.toString() // 確保資料是字串格式
-            });
-            
-            await newMessage.save();
-            console.log('[Database] Message saved');
+            const messageData = JSON.parse(data.toString());
 
-            // 廣播訊息給所有客戶端
-            let clients = wss.clients;
-            clients.forEach(client => {
-                client.send(`${ws.id}: ${data}`);
-            });
+            console.log("[Message from client] data: ", data);
+
+            // 根據訊息類型處理
+            switch (true) {
+                case messageData.userLogin !== undefined:
+                    const loginData = messageData.userLogin;
+                    if (
+                        loginData.account === "030501" &&
+                        loginData.password === "Pa$$w0rd"
+                    ) {
+                        ws.send(
+                            JSON.stringify({
+                                userLogin: {
+                                    status: "success",
+                                    sauser_accessToken:
+                                        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxLCJleHAiOjE3MzEwNDc0NjF9.jLvMeh0UJDcN47HxsqbAKFzhZfiTPMzZUOqPQpMu-gg",
+                                    sauser_refreshToken:
+                                        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxfQ.jAsZ42xcCB4izy9qorBLGEJEcGLyq4eNb-AGc4ZugMQ",
+                                },
+                            })
+                        );
+                    } else {
+                        ws.send(
+                            JSON.stringify({
+                                userLogin: {
+                                    status: "error",
+                                    message: "帳號或密碼錯誤",
+                                },
+                            })
+                        );
+                    }
+                    break;
+                case messageData.deleteWorkoutbuilder !== undefined:
+                    console.log(
+                        "處理聊天訊息",
+                        messageData.deleteWorkoutbuilder
+                    );
+                    if (
+                        messageData.deleteWorkoutbuilder &&
+                        messageData.deleteWorkoutbuilder._id
+                    ) {
+                        ws.send(
+                            JSON.stringify({
+                                deleteWorkoutbuilder: {
+                                    status: "error",
+                                },
+                            })
+                        );
+                    } else {
+                        ws.send(
+                            JSON.stringify({
+                                deleteWorkoutbuilder: {
+                                    status: "error",
+                                    message: "錯誤",
+                                },
+                            })
+                        );
+                    }
+                    break;
+                case messageData.getWorkoutbuilders !== undefined:
+                    console.log("處理聊天訊息", messageData.getWorkoutbuilders);
+                    if (
+                        messageData.getWorkoutbuilders &&
+                        messageData.getWorkoutbuilders.sauser_accessToken
+                    ) {
+                        ws.send(
+                            JSON.stringify({
+                                getWorkoutbuilders: {
+                                    status: "success",
+                                    data: [],
+                                },
+                            })
+                        );
+                    } else {
+                        ws.send(
+                            JSON.stringify({
+                                getWorkoutbuilders: {
+                                    status: "error",
+                                    message: "錯誤",
+                                },
+                            })
+                        );
+                    }
+                    break;
+                case messageData.addNewWorkoutbuilder !== undefined:
+                    console.log(
+                        "處理聊天訊息",
+                        messageData.addNewWorkoutbuilder
+                    );
+                    if (
+                        messageData.addNewWorkoutbuilder &&
+                        messageData.addNewWorkoutbuilder.data
+                    ) {
+                        // 定義型別訊息的 Schema
+                        const messageSchema = new mongoose.Schema({
+                            sauser_accessToken: String,
+                            data: mongoose.Schema.Types.Mixed,
+                        });
+
+                        // 建立 Message model
+                        const Message = mongoose.model(
+                            "Message",
+                            messageSchema
+                        );
+
+                        // 將訊息儲存到資料庫
+                        const newMessage = new Message({
+                           sauser_accessToken: messageData.addNewWorkoutbuilder.sauser_accessToken,
+                            data:  messageData.addNewWorkoutbuilder.data, // 確保資料是字串格式
+                        });
+
+                        await newMessage.save();
+                        console.log("[Database] Message saved");
+
+                        ws.send(
+                            JSON.stringify({
+                                addNewWorkoutbuilder: {
+                                    status: "success",
+                                },
+                            })
+                        );
+                    } else {
+                        ws.send(
+                            JSON.stringify({
+                                addNewWorkoutbuilder: {
+                                    status: "error",
+                                    message: "錯誤",
+                                },
+                            })
+                        );
+                    }
+                    break;
+                case messageData.updateWorkoutbuilder !== undefined:
+                    console.log(
+                        "處理聊天訊息",
+                        messageData.updateWorkoutbuilder
+                    );
+                    if (
+                        messageData.updateWorkoutbuilder &&
+                        messageData.updateWorkoutbuilder.sauser_accessToken &&
+                        messageData.updateWorkoutbuilder._id &&
+                        messageData.updateWorkoutbuilder.data
+                    ) {
+                        ws.send(
+                            JSON.stringify({
+                                updateWorkoutbuilder: {
+                                    status: "success",
+                                },
+                            })
+                        );
+                    } else {
+                        ws.send(
+                            JSON.stringify({
+                                updateWorkoutbuilder: {
+                                    status: "error",
+                                    message: "錯誤",
+                                },
+                            })
+                        );
+                    }
+                    break;
+                default:
+                    ws.send(
+                        JSON.stringify({
+                            status: "error",
+                            message: "未知的訊息類型",
+                        })
+                    );
+            }
         } catch (error) {
-            console.error('[Database] Error saving message:', error);
+            console.error("[Database] Error saving message:", error);
         }
     });
-
-    ws.on('close', () => {
-        console.log('[Close connected]');
+    //連接關閉
+    ws.on("close", () => {
+        console.log("[Close connected]");
     });
 });
 
 // 處理未捕獲的錯誤
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+process.on("uncaughtException", (error) => {
+    console.error("Uncaught Exception:", error);
 });
 
-// 優雅地關閉連線
-process.on('SIGTERM', async () => {
-    console.log('Shutting down...');
+// 優雅地關閉連線 不做優雅關閉MongoDB 可能保留未正確關閉的連接，影響資料庫效能
+process.on("SIGTERM", async () => {
+    console.log("Shutting down...");
     await mongoose.connection.close();
     server.close();
     process.exit(0);
