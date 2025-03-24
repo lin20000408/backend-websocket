@@ -1,208 +1,78 @@
 const express = require('express');
-const app = express();
-const { WebSocketServer } = require('ws');
-const mongoose = require("mongoose");
-let connectStatus = false;
+const ServerSocket = require('ws').Server;
+const mongoose = require('mongoose'); // 加入 MongoDB 套件
 
-// MongoDB 連接
-async function connectMongoDB() {
-    try {
-        await mongoose.connect('mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
-        console.log('Connected to MongoDB...');
-        connectStatus = true;
-    } catch (error) {
-        console.log(error);
-    }
-}
+const PORT = 8080;
 
-connectMongoDB();
+// 連接到 MongoDB
+mongoose.connect('mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('[Database] Connected to MongoDB');
+}).catch(err => {
+    console.error('[Database] Connection error:', err);
+});
 
-app.use(express.json());
-
-// 中間件檢查資料庫連接
-app.use((req, res, next) => {
-    if (connectStatus) {
-        next();
-    } else {
-        res.status(503).send({
-            status: false,
-            message: 'Server is not ready'
-        });
+// 定義訊息的 Schema
+const messageSchema = new mongoose.Schema({
+    clientId: String,
+    message: String,
+    timestamp: {
+        type: Date,
+        default: Date.now
     }
 });
 
-// Todo Schema 和 Model
-const todoSchema = new mongoose.Schema({
-    id: Number,
-    title: String,
-    completed: Boolean,
-});
+// 建立 Message model
+const Message = mongoose.model('Message', messageSchema);
 
-const Todo = mongoose.model('Todo', todoSchema);
+const server = express()
+    .listen(PORT, () => console.log(`[Server] Listening on https://localhost:${PORT}`));
 
-// 啟動 HTTP 服務器
-const PORT = process.env.PORT || 3005;
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+const wss = new ServerSocket({ server });
 
-// 創建 WebSocket 服務器
-const wss = new WebSocketServer({ server });
+wss.on('connection', (ws, req) => {
+    ws.id = req.headers['sec-websocket-key'].substring(0, 8);
+    ws.send(`[Client ${ws.id} is connected!]`);
 
-wss.on('connection', (ws) => {
-    console.log('New WebSocket connection established');
-
-    ws.on('message', async (message) => {
+    ws.on('message', async (data) => {
         try {
-            const data = JSON.parse(message);
+            console.log('[Message from client] data: ', data);
+            
+            // 將訊息儲存到資料庫
+            const newMessage = new Message({
+                clientId: ws.id,
+                message: data.toString() // 確保資料是字串格式
+            });
+            
+            await newMessage.save();
+            console.log('[Database] Message saved');
 
-            switch (data.type) {
-                case 'GET_TODOS':
-                    const todos = await Todo.find();
-                    ws.send(JSON.stringify({
-                        status: true,
-                        type: 'TODOS_LIST',
-                        data: todos
-                    }));
-                    break;
-
-                case 'CREATE_TODO':
-                    const { title, completed } = data.payload;
-                    const todo = new Todo({
-                        id: new Date().getTime(),
-                        title,
-                        completed,
-                    });
-                    await todo.save();
-                    ws.send(JSON.stringify({
-                        status: true,
-                        type: 'TODO_CREATED',
-                        message: 'Create todo successfully'
-                    }));
-                    // 廣播給所有客戶端
-                    wss.clients.forEach(client => {
-                        if (client.readyState === WebSocket.OPEN) {
-                            client.send(JSON.stringify({
-                                status: true,
-                                type: 'TODOS_UPDATED',
-                                data: [todo]
-                            }));
-                        }
-                    });
-                    break;
-
-                default:
-                    ws.send(JSON.stringify({
-                        status: false,
-                        message: 'Unknown command'
-                    }));
-            }
+            // 廣播訊息給所有客戶端
+            let clients = wss.clients;
+            clients.forEach(client => {
+                client.send(`${ws.id}: ${data}`);
+            });
         } catch (error) {
-            ws.send(JSON.stringify({
-                status: false,
-                message: 'Error processing request',
-                error: error.message
-            }));
+            console.error('[Database] Error saving message:', error);
         }
     });
-    ws.on('error', (error) => {
-        console.log('WebSocket error:', error);
-    });
+
     ws.on('close', () => {
-        console.log('WebSocket connection closed');
-    });
-
- 
-});
-
-// 可選：保留 REST API
-app.get('/todos', async (req, res) => {
-    const todos = await Todo.find();
-    res.send({
-        status: true,
-        data: todos,
+        console.log('[Close connected]');
     });
 });
 
-app.post('/todos', async (req, res) => {
-    const { title, completed } = req.body;
-    const todo = new Todo({
-        id: new Date().getTime(),
-        title,
-        completed,
-    });
-    await todo.save();
-    res.send({
-        status: true,
-        message: 'Create todo successfully',
-    });
+// 處理未捕獲的錯誤
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
 });
 
-// const express=require('express')
-// const app =express()
-// const mongoose = require("mongoose");
-// let connectStatus = false;
-//     async function connectMongoDB () {
-//         try {
-//           await mongoose.connect('mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-//           console.log('Connected to MongoDB...')
-//           connectStatus = true;//connect true
-//         } catch (error) {
-//           console.log(error)
-//         }
-//       }
-      
-//       connectMongoDB()
-      
-    
-      
-//       app.use(express.json());
-//       //!middleWare :connect true next,false 攔截
-//       app.use((req, res, next) => {
-//         if (connectStatus) {
-//           next();
-//         } else {
-//           res.status(503).send({
-//             status: false,
-//             message: 'Server is not ready'
-//           });
-//         }
-//       })
-      
-// //定義完 Schema 之後，接著就是要來建立 Model，通常 Modal 會對應特定的 Schema，而且每個 Model 都會跟資料庫中的一個 collection 對應，也就是說，我們可以透過 Model 來存取資料庫中的資料。
-//       const todoSchema = new mongoose.Schema({
-//         id: Number,
-//         title: String,
-//         completed: Boolean,
-//       });
-      
-//       const Todo = mongoose.model('Todo', todoSchema);
-      
-//       app.get('/todos', async (req, res) => {
-//         const todos = await Todo.find();
-//         res.send({
-//           status: true,
-//           data: todos,
-//         });
-//       });
-      
-//       app.post('/todos', async (req, res) => {
-//         const { title, completed } = req.body;
-      
-//         const todo = new Todo({
-//           id: new Date().getTime(),
-//           title,
-//           completed,
-//         });
-      
-//         await todo.save();
-//         res.send({
-//           status: true,
-//           message: 'Create todo successfully',
-//         });
-//       });
-// // 啟動 Express 伺服器
-// const PORT = process.env.PORT || 3000; // 使用環境變數中的 PORT，或預設為 3000
-// app.listen(PORT, () => {
-//     console.log(`Server is running on port ${PORT}`);
-// });
+// 優雅地關閉連線
+process.on('SIGTERM', async () => {
+    console.log('Shutting down...');
+    await mongoose.connection.close();
+    server.close();
+    process.exit(0);
+});
