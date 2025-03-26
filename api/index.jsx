@@ -73,10 +73,7 @@ wss.on("connection", (ws, req) => {
                         "處理聊天訊息",
                         messageData.deleteWorkoutbuilder
                     );
-                    if (
-                        messageData.deleteWorkoutbuilder 
-                       
-                    ) {
+                    if (messageData.deleteWorkoutbuilder) {
                         const messageSchema = new mongoose.Schema(
                             {
                                 sauser_accessToken: String,
@@ -84,35 +81,45 @@ wss.on("connection", (ws, req) => {
                             },
                             { collection: "Workoutbuilder" }
                         );
-                
-                        const Workoutbuilder = mongoose.model("Workoutbuilder", messageSchema);
-                        try {
-                       // Delete the document
-            const deletedMessage = await Workoutbuilder.findOneAndDelete(
-                { sauser_accessToken: messageData.deleteWorkoutbuilder.sauser_accessToken }
-            );
 
-            if (deletedMessage) {
-                console.log("[Database] 刪除成功:", deletedMessage);
-                ws.send(
-                    JSON.stringify({
-                        deleteWorkoutbuilder: {
-                            status: "success",
-                            message: "刪除成功"
-                        },
-                    })
-                );}
-                    } catch (error) {
-                        console.error("[Database] 更新失敗:", error);
-                        ws.send(
-                            JSON.stringify({
-                                deleteWorkoutbuilder: {
-                                    status: "error",
-                                    message: "更新失敗",
-                                },
-                            })
+                        const Workoutbuilder = mongoose.model(
+                            "Workoutbuilder",
+                            messageSchema
                         );
-                    }
+                        try {
+                            // Delete the document
+                            const deletedMessage =
+                                await Workoutbuilder.findOneAndDelete({
+                                    sauser_accessToken:
+                                        messageData.deleteWorkoutbuilder
+                                            .sauser_accessToken,
+                                });
+
+                            if (deletedMessage) {
+                                console.log(
+                                    "[Database] 刪除成功:",
+                                    deletedMessage
+                                );
+                                ws.send(
+                                    JSON.stringify({
+                                        deleteWorkoutbuilder: {
+                                            status: "success",
+                                            message: "刪除成功",
+                                        },
+                                    })
+                                );
+                            }
+                        } catch (error) {
+                            console.error("[Database] 更新失敗:", error);
+                            ws.send(
+                                JSON.stringify({
+                                    deleteWorkoutbuilder: {
+                                        status: "error",
+                                        message: "更新失敗",
+                                    },
+                                })
+                            );
+                        }
                     }
                     break;
                 case messageData.getWorkoutbuilders !== undefined:
@@ -152,115 +159,157 @@ wss.on("connection", (ws, req) => {
                         // Define the schema for the message type
                         const messageSchema = new mongoose.Schema(
                             {
+                                sauser_accessToken: {
+                                    type: String,
+                                    required: true,
+                                },
+                                data: [
+                                    {
+                                        member_id: {
+                                            type: mongoose.Schema.Types
+                                                .ObjectId,
+                                            default: mongoose.Types.ObjectId,
+                                        },
+                                        data: {
+                                            type: mongoose.Schema.Types.Mixed,
+                                            required: true,
+                                        },
+                                    },
+                                ],
+                            },
+                            {
+                                collection: "Workoutbuilder",
+                                timestamps: true,
+                            }
+                        );
+
+                        // Create Workoutbuilder model
+                        const Workoutbuilder = mongoose.model(
+                            "Workoutbuilder",
+                            messageSchema
+                        );
+
+                        // Insert new document with proper error handling
+                        try {
+                            const newWorkout = await Workoutbuilder.create({
+                                sauser_accessToken:
+                                    messageData.addNewWorkoutbuilder
+                                        .sauser_accessToken,
+                                data: [
+                                    {
+                                        member_id:
+                                            new mongoose.Types.ObjectId(),
+                                        data: messageData.addNewWorkoutbuilder
+                                            .data,
+                                    },
+                                ],
+                            });
+
+                            ws.send(
+                                JSON.stringify({
+                                    addNewWorkoutbuilder: {
+                                        status: "success",
+                                    },
+                                })
+                            );
+                            return newWorkout;
+                        } catch (error) {
+                            ws.send(
+                                JSON.stringify({
+                                    addNewWorkoutbuilder: {
+                                        status: "error",
+                                        message: "錯誤",
+                                    },
+                                })
+                            );
+                        }
+                    }
+
+                    break;
+                case messageData.updateWorkoutbuilder !== undefined:
+                    console.log(
+                        "處理聊天訊息",
+                        messageData.updateWorkoutbuilder
+                    );
+                    if (
+                        messageData.updateWorkoutbuilder &&
+                        messageData.updateWorkoutbuilder.sauser_accessToken
+                    ) {
+                        // Define the schema (should ideally be outside the case statement)
+                        const messageSchema = new mongoose.Schema(
+                            {
                                 sauser_accessToken: String,
                                 data: mongoose.Schema.Types.Mixed,
                             },
                             { collection: "Workoutbuilder" }
                         );
 
-                        // Create Workoutbuilder model (this will use 'Workoutbuilder' as the collection name)
                         const Workoutbuilder = mongoose.model(
                             "Workoutbuilder",
                             messageSchema
                         );
 
-                        // Save the message to the database
-                        const newMessage = new Workoutbuilder({
-                            sauser_accessToken:
-                                messageData.addNewWorkoutbuilder
-                                    .sauser_accessToken,
-                            data: messageData.addNewWorkoutbuilder.data, // Ensure data is in string format
-                        });
-
-                        await newMessage.save();
-                        console.log("[Database] Message saved");
-
-                        ws.send(
-                            JSON.stringify({
-                                addNewWorkoutbuilder: {
-                                    status: "success",
-                                },
-                            })
-                        );
-                    } else {
-                        ws.send(
-                            JSON.stringify({
-                                addNewWorkoutbuilder: {
-                                    status: "error",
-                                    message: "錯誤",
-                                },
-                            })
-                        );
-                    }
-                    break;
-                    case messageData.updateWorkoutbuilder !== undefined:
-                        console.log(
-                            "處理聊天訊息",
-                            messageData.updateWorkoutbuilder
-                        );
-                        if (
-                            messageData.updateWorkoutbuilder &&
-                            messageData.updateWorkoutbuilder.sauser_accessToken
-                        ) {
-                            // Define the schema (should ideally be outside the case statement)
-                            const messageSchema = new mongoose.Schema(
-                                {
-                                    sauser_accessToken: String,
-                                    data: mongoose.Schema.Types.Mixed,
-                                },
-                                { collection: "Workoutbuilder" }
-                            );
-                    
-                            const Workoutbuilder = mongoose.model("Workoutbuilder", messageSchema);
-                    
-                            try {
-                                // Check if data exists
-                                const existingMessage = await Workoutbuilder.findOne({ 
-                                    sauser_accessToken: messageData.updateWorkoutbuilder.sauser_accessToken 
+                        try {
+                            // Check if data exists
+                            const existingMessage =
+                                await Workoutbuilder.findOne({
+                                    sauser_accessToken:
+                                        messageData.updateWorkoutbuilder
+                                            .sauser_accessToken,
                                 });
-                    
-                                if (!existingMessage) {
-                                    console.log("[Database] 找不到對應的資料，無法更新");
-                                    ws.send(
-                                        JSON.stringify({
-                                            updateWorkoutbuilder: {
-                                                status: "error",
-                                                message: "找不到對應的資料",
-                                            },
-                                        })
-                                    );
-                                    break;
-                                }
-                    
-                                // Update data
-                                const updatedMessage = await Workoutbuilder.findOneAndUpdate(
-                                    { sauser_accessToken: messageData.updateWorkoutbuilder.sauser_accessToken },
-                                    { data: messageData.updateWorkoutbuilder.data },
-                                    { new: true }
+
+                            if (!existingMessage) {
+                                console.log(
+                                    "[Database] 找不到對應的資料，無法更新"
                                 );
-                    
-                                console.log("[Database] 更新成功:", updatedMessage);
-                                
-                                ws.send(
-                                    JSON.stringify({
-                                        updateWorkoutbuilder: {
-                                            status: "success",
-                                        },
-                                    })
-                                );
-                            } catch (error) {
-                                console.error("[Database] 更新失敗:", error);
                                 ws.send(
                                     JSON.stringify({
                                         updateWorkoutbuilder: {
                                             status: "error",
-                                            message: "更新失敗",
+                                            message: "找不到對應的資料",
                                         },
                                     })
                                 );
+                                break;
                             }
+
+                            // Update data
+                            const updatedMessage =
+                                await Workoutbuilder.findOneAndUpdate(
+                                    {
+                                        sauser_accessToken:
+                                            messageData.updateWorkoutbuilder
+                                                .sauser_accessToken,
+                                    },
+                                    {
+                                        data: messageData.updateWorkoutbuilder
+                                            .data,
+                                    },
+                                    { new: true }
+                                );
+
+                            console.log("[Database] 更新成功:", updatedMessage);
+
+                            ws.send(
+                                JSON.stringify({
+                                    updateWorkoutbuilder: {
+                                        status: "success",
+                                    },
+                                })
+                            );
+                        } catch (error) {
+                            console.error("[Database] 更新失敗:", error);
+                            ws.send(
+                                JSON.stringify({
+                                    updateWorkoutbuilder: {
+                                        status: "error",
+                                        message: "更新失敗",
+                                    },
+                                })
+                            );
                         }
-                        break;
+                    }
+                    break;
                 default:
                     ws.send(
                         JSON.stringify({
