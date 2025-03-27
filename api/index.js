@@ -7,8 +7,8 @@ import { handleAddNewWorkoutbuilder } from "./handleAddNewWorkoutbuilder.js";
 import { handleUpdateWorkoutbuilder } from "./handleUpdateWorkoutbuilder.js";
 
 const PORT = 8080;
-   //?集合－workoutBuilder Define the schema for the message type
-   const messageSchema = new mongoose.Schema(
+//?集合－workoutBuilder Define the schema for the message type
+const messageSchema = new mongoose.Schema(
     {
         sauser_accessToken: {
             type: String,
@@ -30,12 +30,9 @@ const PORT = 8080;
 );
 
 // Create Workoutbuilder model
-const Workoutbuilder = mongoose.model(
-    "Workoutbuilder",
-    messageSchema
-);
+const Workoutbuilder = mongoose.model("Workoutbuilder", messageSchema);
 async function handleMessage(messageData, ws, Workoutbuilder) {
-     if (messageData.deleteWorkoutbuilder !== undefined) {
+    if (messageData.deleteWorkoutbuilder !== undefined) {
         await handleDeleteWorkoutbuilder(messageData, ws, Workoutbuilder);
     } else if (messageData.getWorkoutbuilders !== undefined) {
         await handleGetWorkoutbuilders(messageData, ws, Workoutbuilder);
@@ -45,6 +42,30 @@ async function handleMessage(messageData, ws, Workoutbuilder) {
         await handleUpdateWorkoutbuilder(messageData, ws, Workoutbuilder);
     }
 }
+//?集合－weight Define the schema for the message type
+const messageWeightSchema = new mongoose.Schema(
+    {
+        sauser_accessToken: {
+            type: String,
+            required: true,
+        },
+        data: [
+            {
+                data: {
+                    type: mongoose.Schema.Types.Mixed,
+                    required: true,
+                },
+            },
+        ],
+    },
+    {
+        collection: "Weight", // 改為 "Weight" 集合
+        timestamps: true,
+    }
+);//data 包含 DATE UNIT WEIGHT
+
+// 創建 Weight 模型
+const Weight = mongoose.model("Weight", messageWeightSchema);
 // 連接到 MongoDB
 mongoose
     .connect(
@@ -78,281 +99,278 @@ wss.on("connection", (ws, req) => {
             const messageData = JSON.parse(data.toString());
 
             console.log("[Message from client] data: ", data);
-         
-            
-        await handleMessage(messageData, ws, Workoutbuilder);
+
+            await handleMessage(messageData, ws, Workoutbuilder);
             // 根據訊息類型處理
-//             switch (true) {
-//                 case messageData.userLogin !== undefined:
-//                     const loginData = messageData.userLogin;
-//                     if (
-//                         loginData.account === "030501" &&
-//                         loginData.password === "Pa$$w0rd"
-//                     ) {
-//                         ws.send(
-//                             JSON.stringify({
-//                                 userLogin: {
-//                                     status: "success",
-//                                     sauser_accessToken:
-//                                         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxLCJleHAiOjE3MzEwNDc0NjF9.jLvMeh0UJDcN47HxsqbAKFzhZfiTPMzZUOqPQpMu-gg",
-//                                     sauser_refreshToken:
-//                                         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxfQ.jAsZ42xcCB4izy9qorBLGEJEcGLyq4eNb-AGc4ZugMQ",
-//                                 },
-//                             })
-//                         );
-//                     } else {
-//                         ws.send(
-//                             JSON.stringify({
-//                                 userLogin: {
-//                                     status: "error",
-//                                     message: "帳號或密碼錯誤",
-//                                 },
-//                             })
-//                         );
-//                     }
-//                     break;
-//                 case messageData.deleteWorkoutbuilder !== undefined:
-//                     console.log(
-//                         "處理聊天訊息",
-//                         messageData.deleteWorkoutbuilder
-//                     );
-//                     if (messageData.deleteWorkoutbuilder) {
-//                         try {
-//                             const updateResult = await Workoutbuilder.updateOne(
-//                                 {
-//                                     sauser_accessToken: messageData.deleteWorkoutbuilder.sauser_accessToken
-//                                 },
-//                                 {
-//                                     $pull: { data: { _id: messageData.deleteWorkoutbuilder._id } }
-//                                 }
-//                             );
-                        
-//                             console.log("Update result:", updateResult);
-                        
-//                             if (updateResult.modifiedCount === 0) {
-//                                 console.log("[Database] No matching document or item found");
-//                                 ws.send(
-//                                     JSON.stringify({
-//                                         deleteWorkoutbuilder: {
-//                                             status: "error",
-//                                             message: "No matching document or item found"
-//                                         }
-//                                     })
-//                                 );
-//                                 return;
-//                             }
-                        
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     deleteWorkoutbuilder: {
-//                                         status: "success"
-//                                     }
-//                                 })
-//                             );
-                        
-//                         } catch (error) {
-//                             console.error("[Database] Error deleting workout item:", error);
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     deleteWorkoutbuilder: {
-//                                         status: "error",
-//                                         message: "Internal server error during deletion",
-//                                         error: error.message
-//                                     }
-//                                 })
-//                             );
-//                         }
-                        
-                        
-                        
-//                     }
-//                     break;
-//                 case messageData.getWorkoutbuilders !== undefined:
-//                     console.log("處理聊天訊息", messageData.getWorkoutbuilders);
-//                     if (
-//                         messageData.getWorkoutbuilders &&
-//                         messageData.getWorkoutbuilders.sauser_accessToken
-//                     ) {
-//                         try {
-//                             const result = await Workoutbuilder.findOne(
-//                                 {
-//                                     sauser_accessToken:
-//                                         messageData.getWorkoutbuilders
-//                                             .sauser_accessToken,
-//                                 }
-//                                 // { data: 1, _id: 0 }
-//                             ); // 只選擇 data 字段，排除 _id)
-//                             if (!result) {
-//                                 console.log(
-//                                     "No document found with this access token"
-//                                 );
-//                                 return null;
-//                             }
-//                             // const renamedData = result.data.map((item) => {
-//                             //     const newItem = { ...item._doc }; // Extract the raw data from _doc
-//                             //     newItem._id = newItem.workoutBuilder_id;
-//                             //     delete newItem.workoutBuilder_id;
-//                             //     return newItem;
-//                             // });
-//                             // console.log(renamedData);
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     getWorkoutbuilders: {
-//                                         status: "success",
-//                                         data: result.data,
-//                                     },
-//                                 })
-//                             );
-//                             console.log(result);
-//                         } catch (error) {
-//                             console.error("Error fetching data:", error);
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     getWorkoutbuilders: {
-//                                         status: "error",
-//                                         message: "錯誤",
-//                                     },
-//                                 })
-//                             );
-//                         }
-//                     }
-//                     break;
-//                 case messageData.addNewWorkoutbuilder !== undefined:
-//                     console.log(
-//                         "處理聊天訊息",
-//                         messageData.addNewWorkoutbuilder
-//                     );
-//                     if (
-//                         messageData.addNewWorkoutbuilder &&
-//                         messageData.addNewWorkoutbuilder.data
-//                     ) {
-//                         try {
-//                             // 尋找現有的 workout 記錄
-//                             let existingWorkout = await Workoutbuilder.findOne({
-//                                 sauser_accessToken:
-//                                     messageData.addNewWorkoutbuilder
-//                                         .sauser_accessToken,
-//                             });
+            //             switch (true) {
+            //                 case messageData.userLogin !== undefined:
+            //                     const loginData = messageData.userLogin;
+            //                     if (
+            //                         loginData.account === "030501" &&
+            //                         loginData.password === "Pa$$w0rd"
+            //                     ) {
+            //                         ws.send(
+            //                             JSON.stringify({
+            //                                 userLogin: {
+            //                                     status: "success",
+            //                                     sauser_accessToken:
+            //                                         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxLCJleHAiOjE3MzEwNDc0NjF9.jLvMeh0UJDcN47HxsqbAKFzhZfiTPMzZUOqPQpMu-gg",
+            //                                     sauser_refreshToken:
+            //                                         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxfQ.jAsZ42xcCB4izy9qorBLGEJEcGLyq4eNb-AGc4ZugMQ",
+            //                                 },
+            //                             })
+            //                         );
+            //                     } else {
+            //                         ws.send(
+            //                             JSON.stringify({
+            //                                 userLogin: {
+            //                                     status: "error",
+            //                                     message: "帳號或密碼錯誤",
+            //                                 },
+            //                             })
+            //                         );
+            //                     }
+            //                     break;
+            //                 case messageData.deleteWorkoutbuilder !== undefined:
+            //                     console.log(
+            //                         "處理聊天訊息",
+            //                         messageData.deleteWorkoutbuilder
+            //                     );
+            //                     if (messageData.deleteWorkoutbuilder) {
+            //                         try {
+            //                             const updateResult = await Workoutbuilder.updateOne(
+            //                                 {
+            //                                     sauser_accessToken: messageData.deleteWorkoutbuilder.sauser_accessToken
+            //                                 },
+            //                                 {
+            //                                     $pull: { data: { _id: messageData.deleteWorkoutbuilder._id } }
+            //                                 }
+            //                             );
 
-//                             if (existingWorkout) {
-//                                 // 如果找到記錄，就在現有的 data 陣列中新增一項
-//                                 existingWorkout.data.push({
-//                                     data: messageData.addNewWorkoutbuilder.data,
-//                                 });
+            //                             console.log("Update result:", updateResult);
 
-//                                 // 保存更新後的記錄
-//                                 await existingWorkout.save();
+            //                             if (updateResult.modifiedCount === 0) {
+            //                                 console.log("[Database] No matching document or item found");
+            //                                 ws.send(
+            //                                     JSON.stringify({
+            //                                         deleteWorkoutbuilder: {
+            //                                             status: "error",
+            //                                             message: "No matching document or item found"
+            //                                         }
+            //                                     })
+            //                                 );
+            //                                 return;
+            //                             }
 
-//                                 ws.send(
-//                                     JSON.stringify({
-//                                         addNewWorkoutbuilder: {
-//                                             status: "success",
-//                                         },
-//                                     })
-//                                 );
-//                                 return existingWorkout;
-//                             } else {
-//                                 // 如果沒找到記錄，創建新的 workout
-//                                 const newWorkout = await Workoutbuilder.create({
-//                                     sauser_accessToken:
-//                                         messageData.addNewWorkoutbuilder
-//                                             .sauser_accessToken,
-//                                     data: [
-//                                         {
-//                                             data: messageData
-//                                                 .addNewWorkoutbuilder.data,
-//                                         },
-//                                     ],
-//                                 });
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     deleteWorkoutbuilder: {
+            //                                         status: "success"
+            //                                     }
+            //                                 })
+            //                             );
 
-//                                 ws.send(
-//                                     JSON.stringify({
-//                                         addNewWorkoutbuilder: {
-//                                             status: "success",
-//                                         },
-//                                     })
-//                                 );
-//                                 return newWorkout;
-//                             }
-//                         } catch (error) {
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     addNewWorkoutbuilder: {
-//                                         status: "error",
-//                                         message: "錯誤",
-//                                     },
-//                                 })
-//                             );
-//                             throw error; // 可選：拋出錯誤以便上層處理
-//                         }
-//                     }
-//                     break;
-//                 case messageData.updateWorkoutbuilder !== undefined:
-//                     console.log(
-//                         "處理聊天訊息",
-//                         messageData.updateWorkoutbuilder
-//                     );
-//                     if (
-//                         messageData.updateWorkoutbuilder &&
-//                         messageData.updateWorkoutbuilder.sauser_accessToken
-//                     ) {
-//                         // 首先嘗試更新特定的 data 項目
-//                         const updateResult = await Workoutbuilder.updateOne(
-//                             {
-//                                 sauser_accessToken:
-//                                     messageData.updateWorkoutbuilder
-//                                         .sauser_accessToken,
-//                                 "data._id":
-//                                     messageData.updateWorkoutbuilder._id,
-//                             },
-//                             {
-//                                 $set: {
-//                                     "data.$": {
-                                        
-//                                         data: messageData.updateWorkoutbuilder
-//                                             .data,
-//                                     },
-//                                 },
-//                             }
-//                         );
-//                         console.log(updateResult);
-                        
-//                         ws.send(
-//                             JSON.stringify({
-//                                 updateWorkoutbuilder: {
-//                                     status: "success",
-//                                 },
-//                             })
-//                         );
-//                         // 檢查更新是否成功
-//                         if (updateResult.modifiedCount === 0) {
-//                             console.log(
-//                                 "[Database] 找不到對應的資料，無法更新"
-//                             );
-//                             ws.send(
-//                                 JSON.stringify({
-//                                     updateWorkoutbuilder: {
-//                                         status: "error",
-//                                         message: "找不到對應的資料或無需更新",
-//                                     },
-//                                 })
-//                             );
-//                             return;
-//                         }
-//                     }
+            //                         } catch (error) {
+            //                             console.error("[Database] Error deleting workout item:", error);
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     deleteWorkoutbuilder: {
+            //                                         status: "error",
+            //                                         message: "Internal server error during deletion",
+            //                                         error: error.message
+            //                                     }
+            //                                 })
+            //                             );
+            //                         }
 
-//                     break;
-//                case messageData.addNewWeight!== undefined:
+            //                     }
+            //                     break;
+            //                 case messageData.getWorkoutbuilders !== undefined:
+            //                     console.log("處理聊天訊息", messageData.getWorkoutbuilders);
+            //                     if (
+            //                         messageData.getWorkoutbuilders &&
+            //                         messageData.getWorkoutbuilders.sauser_accessToken
+            //                     ) {
+            //                         try {
+            //                             const result = await Workoutbuilder.findOne(
+            //                                 {
+            //                                     sauser_accessToken:
+            //                                         messageData.getWorkoutbuilders
+            //                                             .sauser_accessToken,
+            //                                 }
+            //                                 // { data: 1, _id: 0 }
+            //                             ); // 只選擇 data 字段，排除 _id)
+            //                             if (!result) {
+            //                                 console.log(
+            //                                     "No document found with this access token"
+            //                                 );
+            //                                 return null;
+            //                             }
+            //                             // const renamedData = result.data.map((item) => {
+            //                             //     const newItem = { ...item._doc }; // Extract the raw data from _doc
+            //                             //     newItem._id = newItem.workoutBuilder_id;
+            //                             //     delete newItem.workoutBuilder_id;
+            //                             //     return newItem;
+            //                             // });
+            //                             // console.log(renamedData);
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     getWorkoutbuilders: {
+            //                                         status: "success",
+            //                                         data: result.data,
+            //                                     },
+            //                                 })
+            //                             );
+            //                             console.log(result);
+            //                         } catch (error) {
+            //                             console.error("Error fetching data:", error);
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     getWorkoutbuilders: {
+            //                                         status: "error",
+            //                                         message: "錯誤",
+            //                                     },
+            //                                 })
+            //                             );
+            //                         }
+            //                     }
+            //                     break;
+            //                 case messageData.addNewWorkoutbuilder !== undefined:
+            //                     console.log(
+            //                         "處理聊天訊息",
+            //                         messageData.addNewWorkoutbuilder
+            //                     );
+            //                     if (
+            //                         messageData.addNewWorkoutbuilder &&
+            //                         messageData.addNewWorkoutbuilder.data
+            //                     ) {
+            //                         try {
+            //                             // 尋找現有的 workout 記錄
+            //                             let existingWorkout = await Workoutbuilder.findOne({
+            //                                 sauser_accessToken:
+            //                                     messageData.addNewWorkoutbuilder
+            //                                         .sauser_accessToken,
+            //                             });
 
-// break;
-//                     default:
-//                     ws.send(
-//                         JSON.stringify({
-//                             status: "error",
-//                             message: "未知的訊息類型",
-//                         })
-//                     );
-//             }
+            //                             if (existingWorkout) {
+            //                                 // 如果找到記錄，就在現有的 data 陣列中新增一項
+            //                                 existingWorkout.data.push({
+            //                                     data: messageData.addNewWorkoutbuilder.data,
+            //                                 });
+
+            //                                 // 保存更新後的記錄
+            //                                 await existingWorkout.save();
+
+            //                                 ws.send(
+            //                                     JSON.stringify({
+            //                                         addNewWorkoutbuilder: {
+            //                                             status: "success",
+            //                                         },
+            //                                     })
+            //                                 );
+            //                                 return existingWorkout;
+            //                             } else {
+            //                                 // 如果沒找到記錄，創建新的 workout
+            //                                 const newWorkout = await Workoutbuilder.create({
+            //                                     sauser_accessToken:
+            //                                         messageData.addNewWorkoutbuilder
+            //                                             .sauser_accessToken,
+            //                                     data: [
+            //                                         {
+            //                                             data: messageData
+            //                                                 .addNewWorkoutbuilder.data,
+            //                                         },
+            //                                     ],
+            //                                 });
+
+            //                                 ws.send(
+            //                                     JSON.stringify({
+            //                                         addNewWorkoutbuilder: {
+            //                                             status: "success",
+            //                                         },
+            //                                     })
+            //                                 );
+            //                                 return newWorkout;
+            //                             }
+            //                         } catch (error) {
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     addNewWorkoutbuilder: {
+            //                                         status: "error",
+            //                                         message: "錯誤",
+            //                                     },
+            //                                 })
+            //                             );
+            //                             throw error; // 可選：拋出錯誤以便上層處理
+            //                         }
+            //                     }
+            //                     break;
+            //                 case messageData.updateWorkoutbuilder !== undefined:
+            //                     console.log(
+            //                         "處理聊天訊息",
+            //                         messageData.updateWorkoutbuilder
+            //                     );
+            //                     if (
+            //                         messageData.updateWorkoutbuilder &&
+            //                         messageData.updateWorkoutbuilder.sauser_accessToken
+            //                     ) {
+            //                         // 首先嘗試更新特定的 data 項目
+            //                         const updateResult = await Workoutbuilder.updateOne(
+            //                             {
+            //                                 sauser_accessToken:
+            //                                     messageData.updateWorkoutbuilder
+            //                                         .sauser_accessToken,
+            //                                 "data._id":
+            //                                     messageData.updateWorkoutbuilder._id,
+            //                             },
+            //                             {
+            //                                 $set: {
+            //                                     "data.$": {
+
+            //                                         data: messageData.updateWorkoutbuilder
+            //                                             .data,
+            //                                     },
+            //                                 },
+            //                             }
+            //                         );
+            //                         console.log(updateResult);
+
+            //                         ws.send(
+            //                             JSON.stringify({
+            //                                 updateWorkoutbuilder: {
+            //                                     status: "success",
+            //                                 },
+            //                             })
+            //                         );
+            //                         // 檢查更新是否成功
+            //                         if (updateResult.modifiedCount === 0) {
+            //                             console.log(
+            //                                 "[Database] 找不到對應的資料，無法更新"
+            //                             );
+            //                             ws.send(
+            //                                 JSON.stringify({
+            //                                     updateWorkoutbuilder: {
+            //                                         status: "error",
+            //                                         message: "找不到對應的資料或無需更新",
+            //                                     },
+            //                                 })
+            //                             );
+            //                             return;
+            //                         }
+            //                     }
+
+            //                     break;
+            //                case messageData.addNewWeight!== undefined:
+
+            // break;
+            //                     default:
+            //                     ws.send(
+            //                         JSON.stringify({
+            //                             status: "error",
+            //                             message: "未知的訊息類型",
+            //                         })
+            //                     );
+            //             }
         } catch (error) {
             console.error("[Database] Error saving message:", error);
         }
