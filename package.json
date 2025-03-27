@@ -2,6 +2,7 @@
   "name": "backend-websocket",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "license": "MIT",
   "dependencies": {
     "connect-redis": "^8.0.1",
@@ -14,8 +15,8 @@
     "wscat": "^6.0.1"
   },
   "scripts": {
-    "start": "node ./api/index.jsx",
-    "dev": "nodemon ./api/index.jsx"
+    "start": "node ./api/index.js",
+    "dev": "nodemon ./api/index.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
