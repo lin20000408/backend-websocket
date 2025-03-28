@@ -8,6 +8,8 @@ import { handleUpdateWorkoutbuilder } from "./handleUpdateWorkoutbuilder.js";
 //weight
 import {handleAddWeight} from './routes/Weight/handleAddWeight.js'
 import {queryWeightHistory} from './routes/Weight/queryWeightHistory.js'
+//login
+import {userLogin} from './routes/Auth/userLogin.js'
 const PORT = 8080;
 //?集合－workoutBuilder Define the schema for the message type
 const messageSchema = new mongoose.Schema(
@@ -94,6 +96,9 @@ async function handleMessage(messageData, ws, Workoutbuilder,Weight) {
     } 
     else if (messageData.queryWeightHistory !== undefined) {
         await queryWeightHistory(messageData, ws, Weight);}
+        else if(messageData.userLogin !== undefined){
+            await userLogin(messageData, ws, Weight)
+        }
 }
 // 連接到 MongoDB
 mongoose
