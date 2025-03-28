@@ -5,7 +5,9 @@ import { handleDeleteWorkoutbuilder } from "./handleDeleteWorkoutbuilder.js";
 import { handleGetWorkoutbuilders } from "./handleGetWorkoutbuilders.js";
 import { handleAddNewWorkoutbuilder } from "./handleAddNewWorkoutbuilder.js";
 import { handleUpdateWorkoutbuilder } from "./handleUpdateWorkoutbuilder.js";
-
+//weight
+import {handleAddWeight} from './routes/Weight/handleAddWeight.js'
+import {queryWeightHistory} from './routes/Weight/queryWeightHistory.js'
 const PORT = 8080;
 //?集合－workoutBuilder Define the schema for the message type
 const messageSchema = new mongoose.Schema(
@@ -31,7 +33,54 @@ const messageSchema = new mongoose.Schema(
 
 // Create Workoutbuilder model
 const Workoutbuilder = mongoose.model("Workoutbuilder", messageSchema);
-async function handleMessage(messageData, ws, Workoutbuilder) {
+
+//?集合－weight Define the schema for the message type
+const messageWeightSchema = new mongoose.Schema(
+    {
+        sauser_accessToken: {
+            type: String,
+            required: true,
+        },
+        data: [{
+            weight: {
+                type: Number,
+                required: true
+            },
+            units: {
+                type: String,
+                required: true
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }],
+    },
+    {
+        collection: "Weight", // 改為 "Weight" 集合
+        timestamps: true,
+        // 自定義 JSON 輸出格式
+       toJSON: {
+            transform: (doc, ret) => {
+                // 將 data 陣列中的每個 createdAt 轉為無毫秒的 ISO 字符串
+                ret.data = ret.data.map(item => ({
+                    ...item,
+                    createdAt: item.createdAt.toISOString().replace(/\.\d{3}Z$/, "Z")
+                }));
+                // 轉換 document 級別的 timestamps
+                ret.createdAt = ret.createdAt.toISOString().replace(/\.\d{3}Z$/, "Z");
+                ret.updatedAt = ret.updatedAt.toISOString().replace(/\.\d{3}Z$/, "Z");
+                return ret;
+            }
+        }
+    }
+);//data 包含 DATE UNIT WEIGHT
+
+// 創建 Weight 模型
+const Weight = mongoose.model("Weight", messageWeightSchema);
+
+
+async function handleMessage(messageData, ws, Workoutbuilder,Weight) {
     if (messageData.deleteWorkoutbuilder !== undefined) {
         await handleDeleteWorkoutbuilder(messageData, ws, Workoutbuilder);
     } else if (messageData.getWorkoutbuilders !== undefined) {
@@ -40,32 +89,12 @@ async function handleMessage(messageData, ws, Workoutbuilder) {
         await handleAddNewWorkoutbuilder(messageData, ws, Workoutbuilder);
     } else if (messageData.updateWorkoutbuilder !== undefined) {
         await handleUpdateWorkoutbuilder(messageData, ws, Workoutbuilder);
-    }
+    }  else if (messageData.addNewWeight !== undefined) {
+        await handleAddWeight(messageData, ws, Weight);
+    } 
+    else if (messageData.queryWeightHistory !== undefined) {
+        await queryWeightHistory(messageData, ws, Weight);}
 }
-//?集合－weight Define the schema for the message type
-const messageWeightSchema = new mongoose.Schema(
-    {
-        sauser_accessToken: {
-            type: String,
-            required: true,
-        },
-        data: [
-            {
-                data: {
-                    type: mongoose.Schema.Types.Mixed,
-                    required: true,
-                },
-            },
-        ],
-    },
-    {
-        collection: "Weight", // 改為 "Weight" 集合
-        timestamps: true,
-    }
-);//data 包含 DATE UNIT WEIGHT
-
-// 創建 Weight 模型
-const Weight = mongoose.model("Weight", messageWeightSchema);
 // 連接到 MongoDB
 mongoose
     .connect(
@@ -100,7 +129,7 @@ wss.on("connection", (ws, req) => {
 
             console.log("[Message from client] data: ", data);
 
-            await handleMessage(messageData, ws, Workoutbuilder);
+            await handleMessage(messageData, ws, Workoutbuilder,Weight);
             // 根據訊息類型處理
             //             switch (true) {
             //                 case messageData.userLogin !== undefined:
