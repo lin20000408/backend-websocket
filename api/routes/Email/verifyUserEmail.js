@@ -10,45 +10,78 @@ const totp = new OTPAuth.TOTP({
     period: 300, // OTP 30 秒內有效
     secret: secret,
 });
-export async function verifyUserEmail(messageData, ws) {
-    console.log("處理聊天訊息", messageData.verifyUserEmail);
-    if (messageData.verifyUserEmail) {
-        try {
-            const otp = totp.generate(); // 產生 OTP
-            console.log(otp);
-            
-            const email = messageData.verifyUserEmail.email;
-            const subject = "otp verify";
-            const message = `您的 OTP 驗證碼是：${otp}`;
-            await contactFormSend(email, subject, message); // Added await for async operation
+export async function verifyUserEmail(messageData, ws, Member) {
+    try {
+        console.log("處理聊天訊息", messageData?.verifyUserEmail);
 
-            ws.send(
-                JSON.stringify({
-                    verifyUserEmail: {
-                        status: "success",
-                    },
-                })
-            );
-        } catch (error) {
-            console.error("[Database] Error deleting workout item:", error);
+        // 檢查 messageData.verifyUserEmail 是否存在
+        if (!messageData?.verifyUserEmail?.email) {
             ws.send(
                 JSON.stringify({
                     verifyUserEmail: {
                         status: "error",
-                        message: "Internal server error during deletion",
-                        error: error.message,
+                        message: "Missing email in request",
                     },
                 })
             );
+            return;
         }
+
+        const email = messageData.verifyUserEmail.email;
+
+        // 尋找現有的會員記錄
+        let existingMember = await Member.findOne({ email });
+
+        if (existingMember) {
+            ws.send(
+                JSON.stringify({
+                    verifyUserEmail: {
+                        status: "error",
+                        message: "User already exists",
+                    },
+                })
+            );
+            return;
+        }
+
+        // 產生 OTP
+        const otp = totp.generate();
+        console.log(`Generated OTP for ${email}:`, otp);
+
+        const subject = "OTP Verification";
+        const message = `您的 OTP 驗證碼是：${otp}`;
+
+        // 發送 OTP 郵件
+        await contactFormSend(email, subject, message);
+
+        ws.send(
+            JSON.stringify({
+                verifyUserEmail: {
+                    status: "success",
+                    message: "OTP sent successfully",
+                },
+            })
+        );
+    } catch (error) {
+        console.error("[VerifyUserEmail] Error:", error);
+        ws.send(
+            JSON.stringify({
+                verifyUserEmail: {
+                    status: "error",
+                    message: "Internal server error",
+                    error: error.message,
+                },
+            })
+        );
     }
 }
+
 export async function confirmUserEmail(messageData, ws) {
     console.log("處理聊天訊息", messageData.confirmUserEmail);
     if (messageData.confirmUserEmail) {
         try {
             console.log(messageData.confirmUserEmail.emailVerificationCode);
-            
+
             const isValid =
                 totp.validate({
                     token: messageData.confirmUserEmail.emailVerificationCode,
@@ -75,5 +108,91 @@ export async function confirmUserEmail(messageData, ws) {
                 })
             );
         }
+    }
+}
+export async function userRegister(messageData, ws, Member) {
+    console.log("處理聊天訊息", messageData.userRegister);
+
+    if (!messageData.userRegister) {
+        ws.send(
+            JSON.stringify({
+                userRegister: {
+                    status: "error",
+                    message: "缺少註冊資料",
+                },
+            })
+        );
+        return;
+    }
+
+    const { userRegister } = messageData;
+    // const hasEmailVerification = !!userRegister.emailVerificationCode;
+
+    try {
+        // 如果有驗證碼，檢查其有效性
+        let isValid = true; // 預設為 true，若無驗證碼則不檢查
+        if (userRegister.emailVerificationCode) {
+            isValid =
+                totp.validate({
+                    token: userRegister.emailVerificationCode,
+                    window: 1,
+                }) !== null;
+
+            if (!isValid) {
+                ws.send(
+                    JSON.stringify({
+                        userRegister: {
+                            status: "error",
+                            message: "驗證碼無效",
+                        },
+                    })
+                );
+                return;
+            }
+        }
+
+        // 建立新會員資料
+        const newMember = new Member({
+            userID: userRegister.userID,
+            password: userRegister.password,
+            email: userRegister.emailVerificationCode
+                ? userRegister.email
+                : null, // 只有驗證時才存 email
+            data: {
+                firstName: userRegister.firstName,
+                lastName: userRegister.lastName,
+                birthday: userRegister.birthday,
+                gender: userRegister.gender,
+                units: userRegister.units,
+                cm: userRegister.cm || null,
+                inch: userRegister.inch || null,
+                kg: userRegister.kg || null,
+                lb: userRegister.lb || null,
+                avatarUrl: userRegister.avatarUrl || "",
+            },
+        });
+
+        // 儲存到 MongoDB
+        await newMember.save();
+        console.log("會員已儲存到 MongoDB");
+
+        // 回傳成功訊息
+        ws.send(
+            JSON.stringify({
+                userRegister: {
+                    status: "success",
+                },
+            })
+        );
+    } catch (err) {
+        console.error("儲存會員失敗:", err);
+        ws.send(
+            JSON.stringify({
+                userRegister: {
+                    status: "error",
+                    message: err.message || "註冊失敗",
+                },
+            })
+        );
     }
 }
