@@ -130,34 +130,49 @@ export async function userRegister(messageData, ws, Member) {
 
     try {
         // 如果有驗證碼，檢查其有效性
-        let isValid = true; // 預設為 true，若無驗證碼則不檢查
-        if (userRegister.emailVerificationCode) {
-            isValid =
-                totp.validate({
-                    token: userRegister.emailVerificationCode,
-                    window: 1,
-                }) !== null;
+        // let isValid = true; // 預設為 true，若無驗證碼則不檢查
+        // if (userRegister.emailVerificationCode) {
+        //     isValid =
+        //         totp.validate({
+        //             token: userRegister.emailVerificationCode,
+        //             window: 1,
+        //         }) !== null;
 
-            if (!isValid) {
-                ws.send(
-                    JSON.stringify({
-                        userRegister: {
-                            status: "error",
-                            message: "驗證碼無效",
-                        },
-                    })
-                );
-                return;
-            }
+        //     if (!isValid) {
+        //         ws.send(
+        //             JSON.stringify({
+        //                 userRegister: {
+        //                     status: "error",
+        //                     message: "驗證碼無效",
+        //                 },
+        //             })
+        //         );
+        //         return;
+        //     }
+        // }
+        // Define the random string generator
+        function generateRandomString() {
+            const characters =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            return Array(16)
+                .fill()
+                .map(() =>
+                    characters.charAt(
+                        Math.floor(Math.random() * characters.length)
+                    )
+                )
+                .join("");
         }
 
+        // Generate the access token once and reuse it
+        const accessToken = generateRandomString();
+        console.log("Generated access token:", accessToken);
+
         // 建立新會員資料
-        const newMember = new Member({
+        const newMemberData = new Member({
             userID: userRegister.userID,
             password: userRegister.password,
-            email: userRegister.emailVerificationCode
-                ? userRegister.email
-                : null, // 只有驗證時才存 email
+
             data: {
                 firstName: userRegister.firstName,
                 lastName: userRegister.lastName,
@@ -171,7 +186,21 @@ export async function userRegister(messageData, ws, Member) {
                 avatarUrl: userRegister.avatarUrl || "",
             },
         });
+        // 只有在 email 驗證過後才加入 email 欄位
+        if (userRegister.emailVerificationCode) {
+            newMemberData.email = userRegister.email;
+        }
 
+        // 只有在 googleSub 存在時才加入 googlesub 和 sauser_accessToken
+        if (userRegister.googleSub) {
+            newMemberData.googlesub = userRegister.googleSub;
+            newMemberData.sauser_accessToken = generateRandomString();
+        }
+        // 建立新的會員物件
+        const newMember = new Member(newMemberData);
+
+        // 儲存到 MongoDB
+        await newMember.save();
         // 儲存到 MongoDB
         await newMember.save();
         console.log("會員已儲存到 MongoDB");

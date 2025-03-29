@@ -10,6 +10,7 @@ import { handleAddWeight } from "./routes/Weight/handleAddWeight.js";
 import { queryWeightHistory } from "./routes/Weight/queryWeightHistory.js";
 //login
 import { userLogin } from "./routes/Auth/userLogin.js";
+import { googleUserLogin } from "./routes/Auth/googleUserLogin.js";
 import { verifyUserEmail } from "./routes/Email/verifyUserEmail.js";
 import { confirmUserEmail } from "./routes/Email/verifyUserEmail.js";
 import { userRegister } from "./routes/Email/verifyUserEmail.js";
@@ -105,16 +106,12 @@ const memberSchema = new mongoose.Schema(
         },
         sauser_accessToken: {
             type: String,
-            required: false, // 可選
+            default: null,
         },
-        email: {
-            type: String,
-   
-            required: false, // 可選
-        },
+        email: { type: String, default: null }, // email 可選且預設為 null
         googlesub: {
-            type: String, // 第三方登入 ID
-            required: false, // 可選
+            type: String,
+            default: null,
         },
         data: {
             type: mongoose.Schema.Types.Mixed, // 允許存放任何 JSON 物件
@@ -148,9 +145,11 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
     } else if (messageData.verifyUserEmail !== undefined) {
         await verifyUserEmail(messageData, ws, Member);
     } else if (messageData.confirmUserEmail !== undefined) {
-        await confirmUserEmail(messageData, ws,Member);
+        await confirmUserEmail(messageData, ws, Member);
     } else if (messageData.userRegister !== undefined) {
         await userRegister(messageData, ws, Member);
+    } else if (messageData.googleUserLogin !== undefined) {
+        await googleUserLogin(messageData, ws, Member);
     }
 }
 // 連接到 MongoDB

@@ -8,7 +8,7 @@ export async function userLogin(messageData, ws, Member) {
                 userID: messageData.userLogin.account,
                 password: messageData.userLogin.password,
             });
-    
+
             if (existingMember) {
                 // Define the random string generator
                 function generateRandomString() {
@@ -23,24 +23,27 @@ export async function userLogin(messageData, ws, Member) {
                         )
                         .join("");
                 }
-    
+
                 // Generate the access token once and reuse it
                 const accessToken = generateRandomString();
                 console.log("Generated access token:", accessToken);
-    
+
                 // Update the document (assuming sauser_accessToken is a field in the schema)
-                existingMember.sauser_accessToken = accessToken;
-    
-                // Save the updated document to the database
-                await existingMember.save();
+                if (!existingMember.sauser_accessToken) {
+                    existingMember.sauser_accessToken = accessToken;
+                    await existingMember.save(); // 記得儲存變更
+                }
                 console.log("Member updated in DB with token:", accessToken);
-    
+
                 // Send response to the client
                 ws.send(
                     JSON.stringify({
                         userLogin: {
                             status: "success",
-                            sauser_accessToken: accessToken,
+                            sauser_accessToken:
+                                !existingMember.sauser_accessToken
+                                    ? accessToken
+                                    : existingMember.sauser_accessToken,
                             sauser_refreshToken:
                                 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJpdnlAZ21haWwuY29tIiwiaWF0IjoxNzMwOTYxMDYxfQ.jAsZ42xcCB4izy9qorBLGEJEcGLyq4eNb-AGc4ZugMQ",
                         },
