@@ -144,7 +144,7 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
     } else if (messageData.queryWeightHistory !== undefined) {
         await queryWeightHistory(messageData, ws, Weight);
     } else if (messageData.userLogin !== undefined) {
-        await userLogin(messageData, ws, Weight);
+        await userLogin(messageData, ws, Member);
     } else if (messageData.verifyUserEmail !== undefined) {
         await verifyUserEmail(messageData, ws, Member);
     } else if (messageData.confirmUserEmail !== undefined) {
