@@ -1,4 +1,6 @@
 import express from "express";
+import dotenv from 'dotenv';
+
 import WebSocket, { WebSocketServer } from "ws"; // 正確匯入方式
 import mongoose from "mongoose";
 import { handleDeleteWorkoutbuilder } from "./handleDeleteWorkoutbuilder.js";
@@ -31,8 +33,8 @@ import {confirmDeleteUserAccount} from "./routes/Email/deleteUserAccount.js";
 
 
 import { getUserProfile} from "./routes/Auth/getUserProfile.js";
+dotenv.config()
 
-const PORT = 8080;
 //?集合－workoutBuilder Define the schema for the message type
 const messageSchema = new mongoose.Schema(
     {
@@ -199,6 +201,9 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
     }
 }
 // 連接到 MongoDB
+
+const PORT = process.env.PORT || 3000;  // 預設值 3000
+const HOSTNAME = process.env.HOSTNAME || 'http://localhost';
 mongoose
     .connect(
         "mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
@@ -216,7 +221,7 @@ mongoose
 
 //伺服器設置
 const server = express().listen(PORT, () =>
-    console.log(`[Server] Listening on https://localhost:${PORT}`)
+    console.log(`[Server] Listening on ${HOSTNAME}:${PORT}`)
 );
 
 const wss = new WebSocketServer({ server });
