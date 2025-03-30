@@ -5,8 +5,16 @@ export async function userLogin(messageData, ws, Member) {
         try {
             // Check if userID and password match
             const existingMember = await Member.findOne({
-                userID: messageData.userLogin.account,
-                password: messageData.userLogin.password,
+                $or: [
+                    {
+                        userID: messageData.userLogin.account,
+                        password: messageData.userLogin.password,
+                    },
+                    {
+                        email: messageData.userLogin.account,
+                        password: messageData.userLogin.password,
+                    },
+                ],
             });
 
             if (existingMember) {

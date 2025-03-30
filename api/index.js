@@ -224,13 +224,13 @@ const wss = new WebSocketServer({ server });
 wss.on("connection", (ws, req) => {
     //設置連接事件處理程序 使用 WebSocket 密鑰的前 8 個字符為每個客戶端分配唯一 ID
     ws.id = req.headers["sec-websocket-key"].substring(0, 8);
-    ws.send(`[Client ${ws.id} is connected!]`);
+    ws.send(JSON.stringify("Client is connected!"));
     //訊息處理
     ws.on("message", async (data) => {
         try {
             const messageData = JSON.parse(data.toString());
 
-            console.log("[Message from client] data: ", data);
+            console.log("Message from client data: ", data);
 
             await handleMessage(messageData, ws, Workoutbuilder, Weight);
         } catch (error) {
