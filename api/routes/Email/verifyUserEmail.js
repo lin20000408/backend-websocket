@@ -95,6 +95,14 @@ export async function confirmUserEmail(messageData, ws) {
                         },
                     })
                 );
+            } else {
+                ws.send(
+                    JSON.stringify({
+                        confirmUserEmail: {
+                            status: "fail",
+                        },
+                    })
+                );
             }
         } catch (error) {
             console.error("[Database] Error deleting workout item:", error);
@@ -183,7 +191,6 @@ export async function userRegister(messageData, ws, Member) {
                 inch: userRegister.inch || null,
                 kg: userRegister.kg || null,
                 lb: userRegister.lb || null,
-                avatarUrl: userRegister.avatarUrl || "",
             },
         });
         // 只有在 email 驗證過後才加入 email 欄位
@@ -223,5 +230,75 @@ export async function userRegister(messageData, ws, Member) {
                 },
             })
         );
+    }
+}
+
+export async function updateUserProfile(messageData, ws, Member) {
+    console.log("處理聊天訊息", messageData.updateUserProfile);
+    if (messageData.updateUserProfile) {
+        try {
+            const updateData = {};
+            const { updateUserProfile } = messageData;
+            // 先判斷是否有 email 更新，並獨立執行
+            if (updateUserProfile.email) {
+                const updateResult = await Member.updateOne(
+                    {
+                        sauser_accessToken:
+                            updateUserProfile.sauser_accessToken,
+                    },
+                    {
+                        $set: {
+                            email: updateUserProfile.email,
+                        },
+                    }
+                );
+                console.log(updateResult);
+            }
+
+            // 遍歷 updateUserProfile 物件，僅加入有值的欄位
+            Object.keys(updateUserProfile).forEach((key) => {
+                const value = updateUserProfile[key];
+                if (
+                    key !== "emailVerificationCode" &&
+                    key !== "sauser_accessToken" &&
+                    key !== "email" &&
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                ) {
+                    updateData[`data.${key}`] = value;
+                }
+            });
+
+            // 確保有要更新的資料才執行 updateOne
+            if (Object.keys(updateData).length > 0) {
+                const updateResult = await Member.updateOne(
+                    {
+                        sauser_accessToken:
+                            updateUserProfile.sauser_accessToken,
+                    },
+                    { $set: updateData }
+                );
+
+                console.log(updateResult);
+            }
+            ws.send(
+                JSON.stringify({
+                    updateUserProfile: {
+                        status: "success",
+                    },
+                })
+            );
+        } catch (error) {
+            console.error("更新用戶資料時發生錯誤:", error);
+            ws.send(
+                JSON.stringify({
+                    updateUserProfile: {
+                        status: "error",
+                        message: error.message,
+                    },
+                })
+            );
+        }
     }
 }

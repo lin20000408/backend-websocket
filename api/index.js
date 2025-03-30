@@ -11,9 +11,27 @@ import { queryWeightHistory } from "./routes/Weight/queryWeightHistory.js";
 //login
 import { userLogin } from "./routes/Auth/userLogin.js";
 import { googleUserLogin } from "./routes/Auth/googleUserLogin.js";
+import { googleUserLoginRebinding } from "./routes/Auth/googleUserLoginRebinding.js";
+import { userAuth} from "./routes/Auth/userAuth.js";
+//email (no previous email)
 import { verifyUserEmail } from "./routes/Email/verifyUserEmail.js";
 import { confirmUserEmail } from "./routes/Email/verifyUserEmail.js";
 import { userRegister } from "./routes/Email/verifyUserEmail.js";
+import { updateUserProfile } from "./routes/Email/verifyUserEmail.js";
+//forgetPassword email (need previous email)
+import { forgetUserPassword } from "./routes/Email/forgetUserPassword.js";
+import { confirmForgetUserPasswordCode} from "./routes/Email/forgetUserPassword.js";
+import { confirmUpdateUserPassword} from "./routes/Email/forgetUserPassword.js";
+//delete email (need previous email)
+import { deleteUserAccount } from "./routes/Email/deleteUserAccount.js";
+import {confirmDeleteUserAccount} from "./routes/Email/deleteUserAccount.js";
+
+
+
+
+
+import { getUserProfile} from "./routes/Auth/getUserProfile.js";
+
 const PORT = 8080;
 //?集合－workoutBuilder Define the schema for the message type
 const messageSchema = new mongoose.Schema(
@@ -123,6 +141,16 @@ const memberSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+// "firstName": "king",
+//             "lastName": "wang",
+//             "birthday": "08/07/1971",
+//             "gender": "male",
+//             "units":true,
+//             "cm": 128,
+//             "inch": 2,
+//             "kg": 50,
+//             "lb": 110,
+//             "avatar": "https://powrplusbucket.s3.ap-northeast-1.amazonaws.com/userID-ivy@gmail.com/avatar/e99de8ba-b220-4f2f-b4b1-c6f427ba9d7e"}
 
 // 建立模型
 const Member = mongoose.model("Member", memberSchema);
@@ -150,6 +178,24 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
         await userRegister(messageData, ws, Member);
     } else if (messageData.googleUserLogin !== undefined) {
         await googleUserLogin(messageData, ws, Member);
+    } else if (messageData.googleUserLoginRebinding !== undefined) {
+        await googleUserLoginRebinding(messageData, ws, Member);
+    } else if (messageData.updateUserProfile !== undefined) {
+        await updateUserProfile(messageData, ws, Member);
+    }else if (messageData.getUserProfile !== undefined) {
+        await getUserProfile(messageData, ws, Member);
+    }else if (messageData.userAuth !== undefined) {
+        await userAuth(messageData, ws, Member);
+    }else if (messageData.forgetUserPassword !== undefined) {
+        await forgetUserPassword(messageData, ws, Member);
+    }else if (messageData.confirmForgetUserPasswordCode !== undefined) {
+        await confirmForgetUserPasswordCode(messageData, ws, Member);
+    }else if (messageData.confirmUpdateUserPassword !== undefined) {
+        await confirmUpdateUserPassword(messageData, ws, Member);
+    }else if (messageData.deleteUserAccount !== undefined) {
+        await deleteUserAccount(messageData, ws, Member);
+    }else if (messageData.confirmDeleteUserAccount !== undefined) {
+        await confirmDeleteUserAccount(messageData, ws, Member);
     }
 }
 // 連接到 MongoDB
