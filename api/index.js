@@ -221,7 +221,7 @@ mongoose
 
 //伺服器設置
 const server = express().listen(PORT, () =>
-    console.log(`[Server] Listening on ${HOSTNAME}`)
+    console.log(`[Server] Listening on ${PORT}`)
 );
 
 const wss = new WebSocketServer({ server });
