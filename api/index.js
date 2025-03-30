@@ -202,8 +202,8 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
 }
 // 連接到 MongoDB
 
-const PORT = process.env.PORT || 3000;  // 預設值 3000
-const HOSTNAME = process.env.HOSTNAME || 'http://localhost';
+const PORT = process.env.PORT || 8080;  // 預設值 3000
+const HOSTNAME = process.env.HOSTNAME || 'http://localhost:8080';
 mongoose
     .connect(
         "mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
@@ -221,7 +221,7 @@ mongoose
 
 //伺服器設置
 const server = express().listen(PORT, () =>
-    console.log(`[Server] Listening on ${HOSTNAME}:${PORT}`)
+    console.log(`[Server] Listening on ${HOSTNAME}`)
 );
 
 const wss = new WebSocketServer({ server });
