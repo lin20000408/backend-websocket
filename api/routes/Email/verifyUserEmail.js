@@ -1,5 +1,7 @@
 import contactFormSend from "./../../../helpers/email-helpers.js";
 import * as OTPAuth from "otpauth";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from "uuid";
 // 產生一組新的 OTP 密鑰
 const secret = new OTPAuth.Secret({ size: 20 }); // 產生一個隨機密鑰
 const totp = new OTPAuth.TOTP({
@@ -253,8 +255,120 @@ export async function updateUserProfile(messageData, ws, Member) {
                     }
                 );
                 console.log(updateResult);
+                // 檢查更新是否成功
+                if (updateResult.modifiedCount === 0) {
+                    return;
+                }
             }
+            // 再判斷是否有.avatar 更新，並獨立執行
 
+            if (updateUserProfile.avatar) {
+                // 配置 S3 客戶端
+                const s3Client = new S3Client({
+                    region: process.env.AWS_REGION || "us-east-1",
+                    credentials: {
+                        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "123",
+                        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "123",
+                    },
+                });
+            
+                async function uploadBase64ToS3(base64String, bucketName) {
+                    try {
+                        if (!base64String || !bucketName) {
+                            throw new Error("缺少必要的參數");
+                        }
+            
+                        const base64Pattern = /^data:image\/\w+;base64,/;
+                        if (!base64Pattern.test(base64String)) {
+                            throw new Error("無效的 base64 圖片格式");
+                        }
+            
+                        const base64Data = base64String.replace(base64Pattern, "");
+                        const buffer = Buffer.from(base64Data, "base64");
+                        const fileName = `${uuidv4()}.jpg`;
+            
+                        const command = new PutObjectCommand({
+                            Bucket: bucketName,
+                            Key: fileName,
+                            Body: buffer,
+                            ContentType: "image/jpeg",
+                            // 移除 ACL 參數，讓 bucket policy 控制存取權限
+                        });
+            
+                        await s3Client.send(command);
+            
+                        // 構建公開 URL https://powrplusbucket.s3.ap-northeast-1.amazonaws.com/userID-ivy@gmail.com/avatar/e99de8ba-b220-4f2f-b4b1-c6f427ba9d7e
+                        const url = `https://${bucketName}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${fileName}`;
+            
+                        return {
+                            success: true,
+                            url: url,
+                            key: fileName,
+                        };
+                    } catch (error) {
+                        console.error("S3 上傳失敗:", error);
+                        return {
+                            success: false,
+                            error: error.message,
+                        };
+                    }
+                }
+            
+                async function updateUserAvatar() {
+                    try {
+                        const base64String = updateUserProfile.avatar;
+                        const bucketName = process.env.S3_BUCKET_NAME || "123";
+            
+                        const uploadResult = await uploadBase64ToS3(base64String, bucketName);
+            
+                        if (!uploadResult.success) {
+                            throw new Error(`圖片上傳失敗: ${uploadResult.error}`);
+                        }
+            
+                        const updateResult = await Member.updateOne(
+                            {
+                                sauser_accessToken: updateUserProfile.sauser_accessToken,
+                            },
+                            {
+                                $set: {
+                                    avatar: uploadResult.url,
+                                },
+                            }
+                        );
+            
+                        if (updateResult.modifiedCount === 0) {
+                            console.warn("未找到匹配的用戶或頭像未更新");
+                            return { success: false, message: "未找到匹配的用戶" };
+                        }
+            
+                        console.log("更新結果:", updateResult);
+                        console.log("圖片 URL:", uploadResult.url);
+                        return { 
+                            success: true, 
+                            url: uploadResult.url,
+                            key: uploadResult.key 
+                        };
+            
+                    } catch (error) {
+                        console.error("更新用戶頭像失敗:", error);
+                        return {
+                            success: false,
+                            error: error.message,
+                        };
+                    }
+                }
+            
+                // 執行並處理結果
+                updateUserAvatar()
+                    .then(result => {
+                        if (!result.success) {
+                            console.error("操作失敗:", result.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("未預期的錯誤:", error);
+                    });
+            }
             // 遍歷 updateUserProfile 物件，僅加入有值的欄位
             Object.keys(updateUserProfile).forEach((key) => {
                 const value = updateUserProfile[key];
@@ -262,6 +376,7 @@ export async function updateUserProfile(messageData, ws, Member) {
                     key !== "emailVerificationCode" &&
                     key !== "sauser_accessToken" &&
                     key !== "email" &&
+                    key !== "avatar" &&
                     value !== undefined &&
                     value !== null &&
                     value !== ""
