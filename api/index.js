@@ -1,5 +1,5 @@
 import express from "express";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
 import WebSocket, { WebSocketServer } from "ws"; // 正確匯入方式
 import mongoose from "mongoose";
@@ -14,7 +14,7 @@ import { queryWeightHistory } from "./routes/Weight/queryWeightHistory.js";
 import { userLogin } from "./routes/Auth/userLogin.js";
 import { googleUserLogin } from "./routes/Auth/googleUserLogin.js";
 import { googleUserLoginRebinding } from "./routes/Auth/googleUserLoginRebinding.js";
-import { userAuth} from "./routes/Auth/userAuth.js";
+import { userAuth } from "./routes/Auth/userAuth.js";
 //email (no previous email)
 import { verifyUserEmail } from "./routes/Email/verifyUserEmail.js";
 import { confirmUserEmail } from "./routes/Email/verifyUserEmail.js";
@@ -22,18 +22,14 @@ import { userRegister } from "./routes/Email/verifyUserEmail.js";
 import { updateUserProfile } from "./routes/Email/verifyUserEmail.js";
 //forgetPassword email (need previous email)
 import { forgetUserPassword } from "./routes/Email/forgetUserPassword.js";
-import { confirmForgetUserPasswordCode} from "./routes/Email/forgetUserPassword.js";
-import { confirmUpdateUserPassword} from "./routes/Email/forgetUserPassword.js";
+import { confirmForgetUserPasswordCode } from "./routes/Email/forgetUserPassword.js";
+import { confirmUpdateUserPassword } from "./routes/Email/forgetUserPassword.js";
 //delete email (need previous email)
 import { deleteUserAccount } from "./routes/Email/deleteUserAccount.js";
-import {confirmDeleteUserAccount} from "./routes/Email/deleteUserAccount.js";
+import { confirmDeleteUserAccount } from "./routes/Email/deleteUserAccount.js";
 
-
-
-
-
-import { getUserProfile} from "./routes/Auth/getUserProfile.js";
-dotenv.config()
+import { getUserProfile } from "./routes/Auth/getUserProfile.js";
+dotenv.config();
 
 //?集合－workoutBuilder Define the schema for the message type
 const messageSchema = new mongoose.Schema(
@@ -184,34 +180,31 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
         await googleUserLoginRebinding(messageData, ws, Member);
     } else if (messageData.updateUserProfile !== undefined) {
         await updateUserProfile(messageData, ws, Member);
-    }else if (messageData.getUserProfile !== undefined) {
+    } else if (messageData.getUserProfile !== undefined) {
         await getUserProfile(messageData, ws, Member);
-    }else if (messageData.userAuth !== undefined) {
+    } else if (messageData.userAuth !== undefined) {
         await userAuth(messageData, ws, Member);
-    }else if (messageData.forgetUserPassword !== undefined) {
+    } else if (messageData.forgetUserPassword !== undefined) {
         await forgetUserPassword(messageData, ws, Member);
-    }else if (messageData.confirmForgetUserPasswordCode !== undefined) {
+    } else if (messageData.confirmForgetUserPasswordCode !== undefined) {
         await confirmForgetUserPasswordCode(messageData, ws, Member);
-    }else if (messageData.confirmUpdateUserPassword !== undefined) {
+    } else if (messageData.confirmUpdateUserPassword !== undefined) {
         await confirmUpdateUserPassword(messageData, ws, Member);
-    }else if (messageData.deleteUserAccount !== undefined) {
+    } else if (messageData.deleteUserAccount !== undefined) {
         await deleteUserAccount(messageData, ws, Member);
-    }else if (messageData.confirmDeleteUserAccount !== undefined) {
+    } else if (messageData.confirmDeleteUserAccount !== undefined) {
         await confirmDeleteUserAccount(messageData, ws, Member);
     }
 }
 // 連接到 MongoDB
 
-const PORT = process.env.PORT || 8080;  // 預設值 3000
-const HOSTNAME = process.env.HOSTNAME || 'http://localhost:8080';
+const PORT = process.env.PORT || 8080; // 預設值 3000
+const HOSTNAME = process.env.HOSTNAME || "http://localhost:8080";
 mongoose
-    .connect(
-        "mongodb+srv://web1:webdevbyjasmine@cluster0.cfv4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
-        {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        }
-    )
+    .connect(process.env.DB_URL, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    })
     .then(() => {
         console.log("[Database] Connected to MongoDB");
     })
