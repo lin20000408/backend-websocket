@@ -324,6 +324,7 @@ export async function updateUserProfile(messageData, ws, Member) {
                         if (!uploadResult.success) {
                             throw new Error(`圖片上傳失敗: ${uploadResult.error}`);
                         }
+            console.log(uploadResult.url);
             
                         const updateResult = await Member.updateOne(
                             {
@@ -331,8 +332,9 @@ export async function updateUserProfile(messageData, ws, Member) {
                             },
                             {
                                 $set: {
-                                    avatar: uploadResult.url,
+                                    "data.avatar": uploadResult.url
                                 },
+                               
                             }
                         );
             
@@ -342,7 +344,7 @@ export async function updateUserProfile(messageData, ws, Member) {
                         }
             
                         console.log("更新結果:", updateResult);
-                        console.log("圖片 URL:", uploadResult.url);
+                        console.log("圖片 URL:", updateUserProfile.sauser_accessToken);
                         return { 
                             success: true, 
                             url: uploadResult.url,
