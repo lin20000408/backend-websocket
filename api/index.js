@@ -200,18 +200,13 @@ async function handleMessage(messageData, ws, Workoutbuilder, Weight) {
 
 const PORT = process.env.PORT || 8080; // 預設值 3000
 const HOSTNAME = process.env.HOSTNAME || "http://localhost:8080";
-mongoose
-    .connect(process.env.DB_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
-    .then(() => {
-        console.log("[Database] Connected to MongoDB");
-    })
-    .catch((err) => {
-        console.error("[Database] Connection error:", err);
-    });
-
+mongoose.connect(process.env.DB_URL)
+  .then(() => {
+    console.log("[Database] Connected to MongoDB");
+  })
+  .catch((err) => {
+    console.error("[Database] Connection error:", err);
+  });
 //伺服器設置
 const server = express().listen(PORT, () =>
     console.log(`[Server] Listening on ${PORT}`)
