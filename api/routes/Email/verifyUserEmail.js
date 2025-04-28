@@ -46,10 +46,10 @@ export async function verifyUserEmail(messageData, ws, Member) {
         // --- (可選) 檢查用戶是否存在於資料庫 ---
         // 即使不用資料庫存時間戳，您可能仍需確認 email 對應用戶存在
          const memberExists = await Member.exists({ email });
-         if (!memberExists) {
+         if (memberExists) {
              ws.send(
                  JSON.stringify({
-                     verifyUserEmail: { status: STATUS_ERROR, message: '找不到該用戶' },
+                     verifyUserEmail: { status: STATUS_ERROR, message: '已經有' },
                  })
              );
              return;
