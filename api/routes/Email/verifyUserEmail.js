@@ -246,7 +246,7 @@ export async function userRegister(messageData, ws, Member) {
         // 只有在 googleSub 存在時才加入 googlesub 和 sauser_accessToken
         if (userRegister.googleSub) {
             newMemberData.googlesub = userRegister.googleSub;
-            newMemberData.sauser_accessToken = generateRandomString();
+          
         }
         // 建立新的會員物件
         const newMember = new Member(newMemberData);
