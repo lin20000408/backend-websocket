@@ -253,8 +253,7 @@ export async function userRegister(messageData, ws, Member) {
 
         // 儲存到 MongoDB
         await newMember.save();
-        // 儲存到 MongoDB
-        await newMember.save();
+
         console.log("會員已儲存到 MongoDB");
 
         // 回傳成功訊息
